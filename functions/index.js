@@ -17,7 +17,12 @@ const { DialogflowApp } = require('actions-on-google');
 const functions = require('firebase-functions');
 const { sprintf } = require('sprintf-js');
 
-const strings = require('./strings');
+const DEFAULT_LOCALE = 'en-US';
+const localizedStrings = {
+ 'en-US': require('./strings_en-US.js'),
+ 'en-GB': require('./strings_en-GB.js'),
+ 'de-DE': require('./strings_de-DE.js')
+};
 
 process.env.DEBUG = 'actions-on-google:*';
 
@@ -25,7 +30,8 @@ process.env.DEBUG = 'actions-on-google:*';
 const Actions = {
   UNRECOGNIZED_DEEP_LINK: 'deeplink.unknown',
   TELL_FACT: 'tell.fact',
-  TELL_CAT_FACT: 'tell.cat.fact'
+  TELL_CAT_FACT: 'tell.cat.fact',
+  WELCOME_INTENT: 'input.welcome'
 };
 /** Dialogflow Parameters {@link https://dialogflow.com/docs/actions-and-parameters#parameters} */
 const Parameters = {
@@ -75,20 +81,21 @@ if (!Object.values) {
  * @return {void}
  */
 const unhandledDeepLinks = app => {
+  const strings = localizedStrings[app.getUserLocale()] || localizedStrings[DEFAULT_LOCALE];
   /** @type {string} */
   const rawInput = app.getRawInput();
   const response = sprintf(strings.general.unhandled, rawInput);
   /** @type {boolean} */
   const screenOutput = app.hasSurfaceCapability(app.SurfaceCapabilities.SCREEN_OUTPUT);
   if (!screenOutput) {
-    return app.ask(response, strings.general.noInputs);
+    return ask(app, response, strings.general.noInputs);
   }
   const suggestions = strings.categories.map(category => category.suggestion);
   const richResponse = app.buildRichResponse()
     .addSimpleResponse(response)
     .addSuggestions(suggestions);
 
-  app.ask(richResponse, strings.general.noInputs);
+  ask(app, richResponse, strings.general.noInputs);
 };
 
 /**
@@ -125,6 +132,7 @@ const initData = app => {
  * @param {string} redirectCategory The category to redirect to since there are no facts left
  */
 const noFactsLeft = (app, currentCategory, redirectCategory) => {
+  const strings = localizedStrings[app.getUserLocale()] || localizedStrings[DEFAULT_LOCALE];
   const data = initData(app);
   // Replace the outgoing facts context with different parameters
   app.setContext(Contexts.FACTS, Lifespans.DEFAULT, { [Parameters.CATEGORY]: redirectCategory });
@@ -143,6 +151,7 @@ const noFactsLeft = (app, currentCategory, redirectCategory) => {
  * @return {void}
  */
 const tellFact = app => {
+  const strings = localizedStrings[app.getUserLocale()] || localizedStrings[DEFAULT_LOCALE];
   const data = initData(app);
   const facts = data.facts.content;
   for (const category of strings.categories) {
@@ -175,7 +184,7 @@ const tellFact = app => {
       return console.error(`No other category besides ${category.category} exists`);
     }
     if (!screenOutput) {
-      return app.ask(noFactsLeft(app, factCategory, otherCategory.category), strings.general.noInputs);
+      return ask(app, noFactsLeft(app, factCategory, otherCategory.category), strings.general.noInputs);
     }
     const suggestions = [otherCategory.suggestion];
     const catFacts = data.facts.cats;
@@ -187,11 +196,11 @@ const tellFact = app => {
       .addSimpleResponse(noFactsLeft(app, factCategory, otherCategory.category))
       .addSuggestions(suggestions);
 
-    return app.ask(richResponse, strings.general.noInputs);
+    return ask(app, richResponse, strings.general.noInputs);
   }
   const factPrefix = category.factPrefix;
   if (!screenOutput) {
-    return app.ask(concat([factPrefix, fact, strings.general.nextFact]), strings.general.noInputs);
+    return ask(app, concat([factPrefix, fact, strings.general.nextFact]), strings.general.noInputs);
   }
   const image = getRandomValue(strings.content.images);
   const [url, name] = image;
@@ -205,7 +214,7 @@ const tellFact = app => {
     .addSimpleResponse(strings.general.nextFact)
     .addSuggestions(strings.general.suggestions.confirmation);
 
-  app.ask(richResponse, strings.general.noInputs);
+  ask(app, richResponse, strings.general.noInputs);
 };
 
 /**
@@ -214,6 +223,7 @@ const tellFact = app => {
  * @return {void}
  */
 const tellCatFact = app => {
+  const strings = localizedStrings[app.getUserLocale()] || localizedStrings[DEFAULT_LOCALE];
   const data = initData(app);
   if (!data.facts.cats) {
     data.facts.cats = strings.cats.facts.slice();
@@ -228,18 +238,18 @@ const tellCatFact = app => {
     // Replace outgoing cat-facts context with lifespan = 0 to end it
     app.setContext(Contexts.CATS, Lifespans.END, {});
     if (!screenOutput) {
-      return app.ask(strings.transitions.cats.heardItAll, strings.general.noInputs);
+      return ask(app, strings.transitions.cats.heardItAll, strings.general.noInputs);
     }
     const richResponse = app.buildRichResponse()
       .addSimpleResponse(strings.transitions.cats.heardItAll, strings.general.noInputs)
       .addSuggestions(strings.general.suggestions.confirmation);
 
-    return app.ask(richResponse);
+    return ask(app, richResponse);
   }
   const factPrefix = sprintf(strings.cats.factPrefix, getRandomValue(strings.cats.sounds));
   if (!screenOutput) {
     // <speak></speak> is needed here since factPrefix is a SSML string and contains audio
-    return app.ask(`<speak>${concat([factPrefix, fact, strings.general.nextFact])}</speak>`, strings.general.noInputs);
+    return ask(app, `<speak>${concat([factPrefix, fact, strings.general.nextFact])}</speak>`, strings.general.noInputs);
   }
   const image = getRandomValue(strings.cats.images);
   const [url, name] = image;
@@ -253,14 +263,56 @@ const tellCatFact = app => {
     .addSimpleResponse(strings.general.nextFact)
     .addSuggestions(strings.general.suggestions.confirmation);
 
-  app.ask(richResponse, strings.general.noInputs);
+  ask(app, richResponse, strings.general.noInputs);
 };
+
+/**
+ * comment here
+ */
+const ask = (app, inputPrompt, noInputPrompts) => {
+  app.data.lastPrompt = inputPrompt;
+  app.data.lastNoInputPrompts = noInputPrompts;
+  app.ask(inputPrompt, noInputPrompts);
+ };
+
+/**
+ * comment here
+ */
+const repeat = app => {
+  if (!app.data.lastPrompt) {
+    ask(app, `Sorry, I didn't understand. Can you reform or say it again?`);
+  }
+  // Move SSML start tags for simple response over
+  if (typeof app.data.lastPrompt === 'string') {
+    let repeatPrefix = `Sure, here's that again.`;
+    const ssmlPrefix = `<speak>`;
+    if (app.data.lastPrompt.startsWith(ssmlPrefix)) {
+      app.data.lastPrompt = app.data.lastPrompt.slice(ssmlPrefix.length);
+      repeatPrefix = ssmlPrefix + repeatPrefix;
+    }
+    app.ask(repeatPrefix + app.data.lastPrompt, app.data.lastNoInputPrompts);
+  } else {
+    app.ask(app.data.lastPrompt, app.data.lastNoInputPrompts);
+  }
+};
+
+const welcomeIntent = (app) => {
+  if (app.getLastSeen()) {
+    app.ask('Hey you are back!!, What would you like to know about?, D E C team, services, or consulting?');
+  } else {
+    app.ask('Welcome to Facts about D E C! Do you want to hear about D E C team, D E C services or do you want to hear about consulting?...');
+  }
+ };
 
 /** @type {Map<string, function(DialogflowApp): void>} */
 const actionMap = new Map();
 actionMap.set(Actions.UNRECOGNIZED_DEEP_LINK, unhandledDeepLinks);
 actionMap.set(Actions.TELL_FACT, tellFact);
 actionMap.set(Actions.TELL_CAT_FACT, tellCatFact);
+actionMap.set('repeat', repeat);
+actionMap.set(Actions.WELCOME_INTENT, welcomeIntent);
+
+
 
 /**
  * The entry point to handle a http request

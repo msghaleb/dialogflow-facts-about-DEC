@@ -63,27 +63,15 @@ const categories = [
 const content = {
   "images": [
     [
-      "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Search_GSA.2e16d0ba.fill-300x300.png",
-      "Google app logo"
+      "https://raw.githubusercontent.com/msghaleb/dialogflow-facts-about-DEC/master/imgs/dec1.png",
+      "DEC app logo"
     ],
     [
-      "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Google_Logo.max-900x900.png",
-      "Google logo"
-    ],
-    [
-      "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Dinosaur-skeleton-at-Google.max-900x900.jpg",
-      "Stan the Dinosaur at Googleplex"
-    ],
-    [
-      "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Wide-view-of-Google-campus.max-900x900.jpg",
-      "Googleplex"
-    ],
-    [
-      "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Bikes-on-the-Google-campus.2e16d0ba.fill-300x300.jpg",
-      "Biking at Googleplex"
+      "https://raw.githubusercontent.com/msghaleb/dialogflow-facts-about-DEC/master/imgs/dec2.png",
+      "DEC logo"
     ]
   ],
-  "link": "https://www.google.com/about/"
+  "link": "https://www.github.com/about/"
 };
 
 const cats = {
@@ -112,11 +100,11 @@ const cats = {
 
 const transitions = {
   "content": {
-    "heardItAll": "Looks like you've heard all there is to know about the %s of Google. I could tell you about its %s instead.",
+    "heardItAll": "Looks like you've heard all there is to know about the %s of D E C. I could tell you about its %s instead.",
     "alsoCats": "By the way, I can tell you about cats too."
   },
   "cats": {
-    "heardItAll": "Looks like you've heard all there is to know about cats. Would you like to hear about Google?"
+    "heardItAll": "Looks like you've heard all there is to know about cats. Would you like to hear about D E C?"
   }
 };
 
@@ -138,7 +126,7 @@ const general = {
   "nextFact": "Would you like to hear another fact?",
   "linkOut": "Learn more",
   "wantWhat": "So what would you like to hear about?",
-  "unhandled": "Welcome to Facts about Google! I'd really rather not talk about %s. Wouldn't you rather talk about Google? I can tell you about Google's history or its headquarters. Which do you want to hear about?"
+  "unhandled": "Welcome to Facts about D E C! I'd really rather not talk about %s. Wouldn't you rather talk about D E C? I can tell you about D E C's Team, the Services or the consulting. Which do you want to hear about?"
 };
 
 // Use deepFreeze to make the constant objects immutable so they are not unintentionally modified
